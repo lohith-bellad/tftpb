@@ -15,6 +15,7 @@
 #include <math.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netdb.h>
@@ -25,6 +26,9 @@
 #include <netinet/in.h>
 #include <dirent.h>
 #include <ctype.h>
+#include <sys/time.h>
+#include <time.h>
+#include <signal.h>
 
 
 /* Opcodes for TFTP implementation */
@@ -40,13 +44,24 @@
 #define MAX_RETXN		3
 #define MAXDATA		1024
 
-/* Error messages */
-char err_0[40] = "Not Defined!!!";
-char err_1[40] = "File not found";
-char err_2[40] = "Access violation/Permission denied";
-char err_3[40] = "Disk Full/Allocation exceeded";
-char err_4[40] = "Illegal TFTP operation";
-char err_5[40] = "Unknown transfer ID";
-char err_6[40] = "File already exists";
- 
+/* constant buffers */
+char data_buf[513];
 
+/* Error messages */
+char err[][40] ={ "Not Defined!!!",
+                "File not found",
+                "Access violation/Permission denied",
+                "Disk Full/Allocation exceeded",
+                "Illegal TFTP operation",
+                "Unknown transfer ID",
+                "File already exists"};
+ 
+/* Client side varaibles */
+char send_buf[256];
+char recv_buf[516];
+char err_pkt[64];
+
+/* Server side variables */
+char def_path[128] = "/Users/lohith_bellad/Desktop/tftp_files/";
+char ack_buf[32];
+char recv_data_buf[520];
