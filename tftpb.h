@@ -39,13 +39,14 @@
 #define ERR 	05
 
 /* Other usefull constant declarations */
-#define DEF_DATA_SIZE	512
+#define DEF_DATA_SIZE	1024
 #define TIMEOUT		3000		
 #define MAX_RETXN		3
 #define MAXDATA		1024
 
 /* constant buffers */
-char data_buf[513];
+unsigned char data_buf[1024];
+int pkt_data_len;
 
 /* Error messages */
 char err[][40] ={ "Not Defined!!!",
@@ -58,10 +59,10 @@ char err[][40] ={ "Not Defined!!!",
  
 /* Client side varaibles */
 char send_buf[256];
-char recv_buf[516];
+unsigned char recv_buf[516];
 char err_pkt[64];
 
 /* Server side variables */
 char def_path[128] = "/Users/lohith_bellad/Desktop/tftp_files/";
-char ack_buf[32];
-char recv_data_buf[520];
+unsigned char ack_buf[32];
+unsigned char recv_data_buf[2048];

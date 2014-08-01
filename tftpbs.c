@@ -17,7 +17,7 @@ struct sockaddr_in serv_addr,client_addr;
 socklen_t clilen;
 
 /* function to form ack packets */
-int build_ack_pkt(int block_cnt, char *buf);
+int build_ack_pkt(int block_cnt, unsigned char *buf);
 
 /* function to kill zombies */
 void sig_handler(int sig);
@@ -44,8 +44,6 @@ int main(int argc, char **argv)
 	serv_addr.sin_port = htons(69);
 	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	
-	
 	if( (sock_id = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP)) < 0)
 	{
 		printf("Error creating the sever udp port\n");
@@ -62,7 +60,6 @@ int main(int argc, char **argv)
 	
 	while(1)
 	{
-		printf("socket id=%d\n",sock_id);
 		if( (n = recvfrom(sock_id,&buf,sizeof(buf),0,(struct sockaddr *)&client_addr,&clilen)) < 0)
 		{
 			printf("Error in receiving, errno = %d, %d\n",n,errno);
@@ -95,15 +92,15 @@ int main(int argc, char **argv)
 	}
 }
 
-int build_ack_pkt(int block_cnt, char *buf)
+int build_ack_pkt(int block_cnt, unsigned char *buf)
 {
 	int len;
-	if( (len = sprintf(buf,"%c%c%c%c",0x00,0x04,0x00,0x00)) < 0)
+	if( (len = sprintf((char*)buf,"%c%c%c%c",0x00,0x04,0x00,0x00)) < 0)
 	{
 		printf("Error in forming the Ack packet\n");
 		return 0;
 	}
-	buf[2] = block_cnt & 0xFF00;
+	buf[2] = (block_cnt & 0xFF00) >> 8;
 	buf[3] = block_cnt & 0x00FF; 
 	return len;
 }
@@ -156,8 +153,8 @@ void start_recv(int sock_id, char *filename)
 	int err_pkt_len;
 	FILE *fp;
 	int i,fd,n,sent_data,bb_cnt;
-	char *ptr;
-	int len,last_pkt=0;
+	unsigned char *ptr;
+	int len,last_pkt=0,recv_data_len = 0;
 	
 	strcat(def_path,filename);
 	if( (fp = fopen(def_path,"w")) == NULL)
@@ -171,7 +168,7 @@ void start_recv(int sock_id, char *filename)
 		close(sock_id);
 		return;
 	}
-	fclose(fp);
+	fd = fileno(fp);
 	memset(ack_buf,0,sizeof(ack_buf));
 	len = build_ack_pkt(0, ack_buf);
 	if( (sent_data = sendto(sock_id,(void*)ack_buf,len,0,(const struct sockaddr *)&client_addr,sizeof(client_addr))) != len)
@@ -185,7 +182,7 @@ void start_recv(int sock_id, char *filename)
 	{
 		n=0;bb_cnt=0;
 		memset(recv_data_buf,0,sizeof(recv_data_buf));
-		for(i=0; i< 40; i++)
+		for(i=0; i< 60; i++)
 		{
 			if( (n = recvfrom(sock_id,&recv_data_buf,sizeof(recv_data_buf),MSG_DONTWAIT,NULL,NULL)) < 0)
 				usleep(250000);
@@ -195,7 +192,7 @@ void start_recv(int sock_id, char *filename)
 		if(n < 0)
 		{
 			printf("\n:(\nConnection Timedout...\n\n");
-			return;
+			exit(0);
 		}
 		ptr = recv_data_buf;
 		
@@ -205,19 +202,13 @@ void start_recv(int sock_id, char *filename)
 			return;
 		}
 		//extracting block count 
-		bb_cnt = recv_data_buf[2] << 16;
-		bb_cnt = recv_data_buf[3];
-		printf("block_cnt = %d\n",bb_cnt);
-		ptr = &recv_data_buf[4];
-		if(strlen(ptr) < 512)
-			last_pkt = 1;
-		if( (fp = fopen(def_path,"a")) == NULL)
-		{
-			printf("File cannot be created in server\n"); /* XXX */
-			return;
-		}
-		fd = fileno(fp); /* file pointer to fd conversion */
+		bb_cnt = recv_data_buf[2] << 8;
+		bb_cnt = bb_cnt | recv_data_buf[3];
+		ptr = &(recv_data_buf[4]);
 		
+		recv_data_len = strlen((char*)ptr);
+		if(recv_data_len < 1024)
+			last_pkt = 1;			
 		memset(send_buf,0,sizeof(ack_buf));
 		len = build_ack_pkt(bb_cnt, ack_buf);
 		if( (sent_data = sendto(sock_id,(void*)ack_buf,len,0,(const struct sockaddr *)&client_addr,sizeof(client_addr))) != len)
@@ -225,8 +216,9 @@ void start_recv(int sock_id, char *filename)
 			printf("Error in sending the request packet\n");
 			return;
 		}
-		if( (n = write(fd,ptr,512)) != 512)
+		if( (n = write(fd,ptr,recv_data_len)) != recv_data_len)
 		{
+			fclose(fp);
 			printf("Error writing data to file\n");
 			return;
 		}
