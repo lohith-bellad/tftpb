@@ -216,6 +216,8 @@ int main (int argc, char **argv)
 	}
 	else if(*ptr++ == 3)
 	{
+		printf("Transfering data, please wait...\n");
+		TID = ntohs(server_addr.sin_port);
 		start_data_rx(ptr,filename);
 	}
 	else
@@ -307,6 +309,19 @@ int build_err_pkt(int err_no,char *buf)
 		printf("Error forming the error packet\n");
 		return 0;
 	}
+	return len;
+}
+
+int build_ack_pkt(int block_cnt, unsigned char *buf)
+{
+	int len;
+	if( (len = sprintf((char*)buf,"%c%c%c%c",0x00,0x04,0x00,0x00)) < 0)
+	{
+		printf("Error in forming the Ack packet\n");
+		return 0;
+	}
+	buf[2] = (block_cnt & 0xFF00) >> 8;
+	buf[3] = block_cnt & 0x00FF; 
 	return len;
 }
 
@@ -409,18 +424,55 @@ unsigned int start_data_tx(char *filename)
 void start_data_rx(char *buf, char *filename)
 {
 	FILE *fp;
-	int fd;
-	
+	int fd,ack_len,n,bb_cnt,i;
+	int sent_data;
+	unsigned char *ptr;
+	char ack_buf[8];
+	char recv_buf[1500];
+	/* opening file for writing */
 	if( (fp = fopen(filename, "w")) == NULL)
 	{
 		printf("Error opening file\n");
 		return;
 	}
-	
-	fd = fileno(fp);
-	
+	fd = fileno(fp); /* file pointer to file descriptor conversion */
 	if( (write(fd,buf,strlen(buf))) < 0)
 	{
-		printf("Error writing to file\n")
+		printf("Error writing to file\n");
 	}
+	
+	ack_len = build_ack_pkt(bb_cnt, ack_buf);
+	if( (sent_data = sendto(sock_id,(void*)ack_buf,ack_len,0,(const struct sockaddr *)&server_addr,sizeof(server_addr))) != len)
+	{
+		printf("Error in sending the ack packet\n");
+		return;
+	}
+	printf("Ack sent successfully\n");
+	
+	n=0;
+	memset(recv_buf,0,sizeof(recv_data_buf));
+	for(i=0; i< 60; i++)
+	{
+		if( (n = recvfrom(sock_id,&recv_buf,sizeof(recv_buf),MSG_DONTWAIT,NULL,NULL)) < 0)
+			usleep(250000);
+		else
+			break;
+	}
+	if(n < 0)
+	{
+		printf("\n:(\nConnection Timedout...\n\n");
+		exit(0);
+	}
+	ptr = recv_buf;
+	
+	if(*ptr++ != 0 || *ptr++ != 3)
+	{
+		printf("Unrecognised packet\n");
+		return;
+	}
+	//extracting block count 
+	bb_cnt = recv_data_buf[2] << 8;
+	bb_cnt = bb_cnt | recv_data_buf[3];
+	ptr = &(recv_data_buf[4]);
+	
 }

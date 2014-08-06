@@ -66,3 +66,15 @@ char err_pkt[64];
 char def_path[128] = "/Users/lohith_bellad/Desktop/tftp_files/";
 unsigned char ack_buf[32];
 unsigned char recv_data_buf[2048];
+
+/* error handling */
+void err_sys(int flag, char *buf)
+{
+	if(flag == 1)
+	{
+		perror(buf);
+		exit(0);
+	}
+	printf("Error: %s\n",buf);
+	exit(0);
+}
