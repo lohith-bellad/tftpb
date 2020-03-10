@@ -1,16 +1,33 @@
-/*----------------------------------------------------------------------------
- Filename:-    tftpb.h
- Description:- This is the header file for Trivial File Transfer Protocol(TFTP)
-			implementation. The implementation has been done based on 
-			RFC 1035, by Sollins, MIT July, 1992.
- Date:- 	     June 29th 2014
- Author:- 	Lohith S Bellad
-               University of Southern California, Information Science Institute
- Platform:-    Mac OS X Mountain Lion
- Place:-       Los Angeles, California.
-----------------------------------------------------------------------------*/
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+//
+//     * Redistributions of source code must retain the above copyright notice,
+//       this list of conditions and the following disclaimer.
+//
+//     * Redistributions in binary form must reproduce the above copyright
+//       notice, this list of conditions and the following disclaimer in the
+//       documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+// IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/* header files for system calls and functions based on BSD 4.4 */
+/* June 29th 2014, Lohith S Bellad
+ * University of Southern California, Information Science Institute
+ * Los Angeles, California.
+ */
+
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -32,24 +49,20 @@
 
 
 /* Opcodes for TFTP implementation */
-#define RRQ	01
-#define WRQ 	02
-#define DATA 	03
-#define ACK 	04
-#define ERR 	05
+#define RRQ	1
+#define WRQ 	2
+#define DATA 	3
+#define ACK 	4
+#define ERR 	5
 
 /* Other usefull constant declarations */
 #define DEF_DATA_SIZE	1024
 #define TIMEOUT		3000		
-#define MAX_RETXN		3
+#define MAX_RETXN	3
 #define MAXDATA		1024
 
-/* constant buffers */
-unsigned char data_buf[1024];
-int pkt_data_len;
-
 /* Error messages */
-char err[][40] ={ "Not Defined!!!",
+char err[][40] = { "Not Defined!!!",
                 "File not found",
                 "Access violation/Permission denied",
                 "Disk Full/Allocation exceeded",
@@ -57,11 +70,6 @@ char err[][40] ={ "Not Defined!!!",
                 "Unknown transfer ID",
                 "File already exists"};
  
-/* Client side varaibles */
-char send_buf[256];
-unsigned char recv_buf[516];
-char err_pkt[64];
-
 /* Server side variables */
 char def_path[128] = "/Users/lohith_bellad/Desktop/tftp_files/";
 unsigned char ack_buf[32];

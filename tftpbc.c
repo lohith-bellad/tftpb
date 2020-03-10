@@ -13,17 +13,16 @@
  *   notice, this list of conditions and the following disclaimer in the
  *   documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+ * ARE DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
  * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *
  * Client side implementation for Trivial File Transfer Protocol(TFTP).
@@ -33,28 +32,25 @@
  *
  * Lohith Bellad
  * USC Information Sciences Institute, Marina Del Rey, California.
+ *
+ * Usage:
+ * ./tftpbc [-s] server [-h] [-u] | [-d] filename [-l] length 
+ * [-s] -- server info
+ * [-h] -- help menu(this one)
+ * [-l] -- length of the data packet(next version, def = 1024 bytes)
+ * [-u] -- upload the file (specify the filemane)
+ * [-d] -- download the file (specify the filename)
+ *
  */
 
 #include "tftpb.h"
 
-/* Usage:
-   ./tftpbc [-s] server [-h] [-u] | [-d] filename [-l] length 
-   [-s] -- server info
-   [-h] -- help menu(this one)
-   [-l] -- length of the data packet(next version, def = 1024 bytes)
-   [-u] -- upload the file (specify the filemane)
-   [-d] -- download the file (specify the filename)
-*/
-
-/* Global variables */
 int sock_id;
 struct sockaddr_in server_addr;
 int TID,server_addr_len;
 struct timeval tyme1,tyme2;
 unsigned long int time1,time2;
 double rate;
-/* function to display the help */
-void display_help();
 
 /* function to form req packet */
 int build_req_pkt(int opcode, char *file, char *buf);
@@ -68,16 +64,29 @@ int build_err_pkt(int err_no, char *buf);
 /* function to start data reception */
 void start_data_rx(char *buf, char *filename);
 
-/* main function */
-int main (int argc, char **argv)
-{
+static void
+display_help() {
+
+	printf("Usage:\n");
+	printf("./tftpbc [-s] server [-h] [-u] | [-d] filename [-l]"
+	       "length\n"); 
+	printf("[-s] -- server info\n");
+	printf("[-h] -- help menu(this one)\n");
+	printf("[-l] -- length of the data packet (next version,"
+	       "def = 1024 bytes)\n");
+	printf("[-u] -- upload the file (specify the filename)\n");
+	printf("[-d] -- download the file (specify the filename)\n");
+}
+
+int 
+main (int argc, char **argv) {
+
 	struct hostent *host_ip = NULL;
 	struct in_addr *addr;
 	extern char *optarg;
-	int speed_flag=0,err_no;
+	int speed_flag = 0, err_no;
 	char filename[128];
 	unsigned int data_txd;
-	
 	int c;
 	int opcode=0;
 	ssize_t sent_data;
@@ -85,121 +94,92 @@ int main (int argc, char **argv)
 	unsigned char *ptr;
 	FILE *fp;
 	
-	/* some display of info, so that main has started */
-	printf("------------------------------------------------------------\n");
-	printf("|        Trivial File Transfer Protocol (TFTP)             |\n");
-	printf("------------------------------------------------------------\n");
-	
-	/* setting default values */
 	pkt_data_len = DEF_DATA_SIZE;
-	if(argc == 1)
-	{
+	if (argc == 1) {
 		printf("Please enter the server and service info\n");
 		display_help();
-		return 0;
+		exit(1);
 	}
 
-	/* parsing the command line options */
-	while( (c = getopt(argc,argv,"h:s:l:d:u:r")) != -1)
-	{
-		switch(c)
-		{
-			/* display usage and quit */
-			case 'h':
-			display_help();
-			return 0;
-		     
-			/* set the speed display flag */
-			case 'r':
-			speed_flag = 1;
-			break;
+	while ((c = getopt(argc,argv,"h:s:l:d:u:r")) != -1) {
+		switch (c) {
 			
-			/*obtaining the server IP */
-			case 's':
-			if( (host_ip = gethostbyname(optarg)) == NULL)
-			{
-				printf("Error in finding server IP address\n");
-				return 0;
-			}
-			break;
-			
-			/* save filename to be uploaded */
-			case 'u':
-			opcode = WRQ;
-			strncpy(filename,optarg,sizeof(filename));
-			fp = fopen(filename,"r");
-			if(fp == NULL)
-			{
-				printf("File does not exist\n");
-				return 0;
-			}
-			fclose(fp);
-			//printf("Filename taken: %s\n",filename);
-			break;
-			
-			/* save filename to be downloaded */
-			case 'd':
-			opcode = RRQ;
-			strncpy(filename,optarg,strlen(filename));
-			fp = fopen(filename, "w");
-			if(fp == NULL)
-			{
-				printf("File cannot be created in the recieving machine\n");
-				return 0;
-				break;
-			}
-			fclose(fp);
-			//printf("Filename taken: %s\n",filename);
-			break;
-			
-			/* set packet size for data transaction */
-			case 'l':
-			pkt_data_len = atoi(optarg);
-			if(pkt_data_len != DEF_DATA_SIZE)
-				printf("Packet data length changed from default value to %d\n",pkt_data_len);
-			break;
-			
-			default:
-			display_help();
-			return 0;
+		case 'h':
+		display_help();
+		return 0;
+
+		case 'r':
+		speed_flag = 1;
+		break;
+
+		case 's':
+		if((host_ip = gethostbyname(optarg)) == NULL) {
+			printf("Error in finding server IP address\n");
+			exit(1);
+		}
+		break;
+
+		case 'u':
+		struct stat st;
+		opcode = RRQ;
+		strncpy(filename, optarg, sizeof(filename));
+		if (stat(filename, &st) != 0) {
+			printf("File does not exist\n");
+			exit(1);
+		}
+		break;
+
+		case 'd':
+		opcode = RRQ;
+		strncpy(filename, optarg, sizeof(filename));
+		fp = fopen(filename, "w");
+		if(fp == NULL) {
+			printf("File cannot be created in the recieving"
+			       "machine\n");
+			exit(1);
+		}
+		fclose(fp);
+		break;
+
+		case 'l':
+		pkt_data_len = min(atoi(optarg), 1350);
+		if(pkt_data_len != DEF_DATA_SIZE)
+			printf("Packet data length changed from default"
+			       "value to %d\n",pkt_data_len);
+		break;
+
+		default:
+		display_help();
+		exit(0);
 		}
 	}
-	/* checking for the right and appropriate number of command line arguments */
-	if(host_ip == NULL)
-	{
-		printf("Please specify the server info\n");
+
+	if ((host_ip == NULL) || (opcode == 0)) {
+		printf("Please specify the server and service type\n");
 		display_help();
-		return 0;
+		exit(1);
 	}
-	if(opcode == 0)
-	{
-		printf("Please specify the service type\n");
-		display_help();
-		return 0;
-	}
-	
-	/* display some info to user */
+
 	addr = (struct in_addr *)host_ip->h_addr;
 	printf("Connecting to %s...\n",inet_ntoa(*addr));
 	
-	/* clear the server address structure */
-	memset(&server_addr,0,sizeof(server_addr));
-	/* fill the server sock addr structure */
+	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	memcpy(&server_addr.sin_addr,addr, host_ip->h_length);
-	server_addr.sin_port = htons(69); /* tftp well known port number, only used at the initial connection setup */
-	
-	/* creating the socket id */
-	if( (sock_id = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP)) == -1)
-	{
-		printf("Error creating the socket, errno = %d\n",errno);
-		return 0;
+	memcpy(&server_addr. sin_addr, addr, host_ip->h_length);
+	server_addr.sin_port = htons(69);
+
+	if ((sock_id = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+		printf("Error creating the socket, errno = %d\n", errno);
+		exit(0);
 	}
-	/* clearing the send buffer */
-	memset(send_buf,0,sizeof(send_buf));
+
+	if (fnctl(sock_id, F_SETFL, O_NONBLOCK) != 0) {
+		printf("Failed to set socket to non-blocking mode\n");
+		exit(0);
+	}
 	
-	/* creating the first packet */
-	len = build_req_pkt(opcode,filename,send_buf);
+	len = send_req_pkt(opcode, filename);
+
 	sent_data = sendto(sock_id,(void*)send_buf,len,0,(const struct sockaddr *)&server_addr,sizeof(server_addr));
 	if(sent_data < 0)
 	{
@@ -287,19 +267,7 @@ int build_req_pkt(int opcode, char *file, char *buf)
 			return 0;
 		}
 	}
-	return len;
-}
-
-void display_help()
-{
-	printf("Usage:\n");
-     printf("./tftpbc [-s] server [-h] [-u] | [-d] filename [-l] length\n"); 
-	printf("[-s] -- server info\n");
-     printf("[-h] -- help menu(this one)\n");
-     printf("[-l] -- length of the data packet (next version, def = 1024 bytes)\n");
-     printf("[-u] -- upload the file (specify the filename)\n");
-     printf("[-d] -- download the file (specify the filename)\n");
-	printf("------------------------Thank you---------------------------\n");
+	return len;gg
 }
 
 int build_err_pkt(int err_no,char *buf)
